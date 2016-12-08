@@ -68,7 +68,7 @@
 static _Bool aperf_mperf_unstable;
 
 /*
- * If set, use kernel logical core numbering for all "per core" metrics.
+ * If set, use kernel logical processor numbering for all per core metrics.
  */
 static _Bool config_lcn;
 
@@ -232,7 +232,7 @@ static const char *config_keys[] = {
     "PackageThermalManagement",
     "TCCActivationTemp",
     "RunningAveragePowerLimit",
-    "LogicalCoreNames",
+    "LogicalCPUNames",
 };
 static const int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
 
@@ -583,9 +583,12 @@ static int submit_counters(struct thread_data *t, struct core_data *c,
   if (!(t->flags & CPU_IS_FIRST_THREAD_IN_CORE))
     goto done;
 
-  /* If not using logical core numbering, set core id */
+  /* If not using logical processor numbering, set core id */
   if (!config_lcn) {
-    ssnprintf(name, sizeof(name), "core%02d", c->core_id);
+    if (topology.num_packages > 1)
+      ssnprintf(name, sizeof(name), "pkg%02d-core%02d", p->package_id, c->core_id);
+    else
+      ssnprintf(name, sizeof(name), "core%02d", c->core_id);
   }
 
   if (do_core_cstate & (1 << 3))
@@ -1567,7 +1570,7 @@ static int turbostat_config(const char *key, const char *value) {
   } else if (strcasecmp("PackageThermalManagement", key) == 0) {
     config_ptm = IS_TRUE(value);
     apply_config_ptm = 1;
-  } else if (strcasecmp("LogicalCoreNames", key) == 0) {
+  } else if (strcasecmp("LogicalCPUNames", key) == 0) {
     config_lcn = IS_TRUE(value);
   } else if (strcasecmp("RunningAveragePowerLimit", key) == 0) {
     tmp_val = strtoul(value, &end, 0);
